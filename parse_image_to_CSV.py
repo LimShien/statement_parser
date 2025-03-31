@@ -2,25 +2,13 @@ import pytesseract
 from PIL import Image
 import csv
 import re
-from datetime import datetime
 
-# Input file
+# Input file - for testing -- to be removed
 context = "BOI"
-image_path = ".data/bank-statement-2.jpg"
-output_file = ".data/output_file.csv"
+image_path = "./data/bank-statement-2.jpg"
+output_file = "./output/output_file.csv"
 
-image = Image.open(image_path)
-row_config = r'--oem 3 --psm 6'
-# Perform OCR to extract text
-extracted_text = pytesseract.image_to_string(image, config=row_config).strip()
-
-# Display extracted text
-#print(extracted_text)
-
-lines = extracted_text.split("\n")
-transactions = [["Date", "Transaction", "Value"]]
-
-def format_date(date):
+def format_date(date): # consider covering cases for YYYY-MM-DD 
   if " " not in date:
      month = re.search(r"[a-zA-Z]{3}",date).group()
      day = re.search(r"\d+", date).group()
@@ -41,6 +29,9 @@ def get_value(line):
   value_pattern = re.compile(r"\b([0-9]+.[0-9][0-9])") # pattern for value of transaction 0.00 / 00.00/ 000.00
   value = re.findall(value_pattern,line)[-1].replace(",",".")
   line = line.replace(value, " ")
+  # cases for credit value, it shows as 00.00 cr 
+  if line.strip().endsWith("cr"):
+    value = -value
   return value, line
 
 def writeToCsv(output_file_name, transactions):
@@ -49,18 +40,30 @@ def writeToCsv(output_file_name, transactions):
     for t in transactions:
       mycsv.writerow(t)
 
+def parseDataFromImage(image_path, output_file):
+  image = Image.open(image_path)
+  row_config = r'--oem 3 --psm 6'
+  # Perform OCR to extract text
+  extracted_text = pytesseract.image_to_string(image, config=row_config).strip()
 
-for line in lines:
-  # Could not parse date from line, not a proper line ...
-  if get_date(line) == None:
-    transactions[-1][1] += line
-    continue
-  else:
-    date, line = get_date(line)
-    value, line = get_value(line)
-    line = line.replace(",", " ").strip() # remove any comma in transaction, for CSV formatting.
-    transactions.append([date, line, value])
-writeToCsv(output_file, transactions)
+  # Display extracted text
+  #print(extracted_text)
+
+  lines = extracted_text.split("\n")
+  transactions = [["Date", "Transaction", "Value"]]
+
+  for line in lines:
+    # Could not parse date from line, not a proper transaction (no date/value) ...
+    if get_date(line) == None:
+      transactions[-1][1] += line
+      continue
+    else:
+      date, line = get_date(line)
+      value, line = get_value(line)
+      line = line.replace(",", " ").strip() # remove any comma in transaction, for CSV formatting.
+      transactions.append([date, line, value])
+
+  writeToCsv(output_file, transactions)
 
 """ print(type(transactions))
 for transaction in transactions:

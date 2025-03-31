@@ -2,3 +2,5 @@ data/account-statement_2025-03-01_2025-03-30_en-ie_ea887b.csv
 data/bank-statement.jpeg
 data/output_file.csv
 data/bank-statement-2.jpg
+output/output_file.csv
+.gitignore
